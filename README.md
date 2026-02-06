@@ -2,7 +2,7 @@
 
 > **Native mobile chat client for [OpenClaw](https://github.com/openclaw/openclaw)** — your AI assistant in your pocket.
 
-Built with [Expo](https://expo.dev) and [expo-openclaw-chat](https://github.com/brunobar79/expo-openclaw-chat) SDK.
+Built with [Expo](https://expo.dev). Powered by [expo-openclaw-chat](https://github.com/brunobar79/expo-openclaw-chat) SDK by [@brunobar79](https://github.com/brunobar79).
 
 Sister project of [OpenCami](https://github.com/robbyczgw-cla/opencami) (web client).
 
@@ -37,7 +37,7 @@ cp .env.example .env.local
 npx expo start
 ```
 
-Scan the QR code with **Expo Go** app on your phone.
+Scan the QR code with the **Expo Go** app on your phone.
 
 ## ⚙️ Configuration
 
@@ -49,17 +49,41 @@ GATEWAY_TOKEN=your-auth-token
 
 ## 🏗️ Tech Stack
 
-- **Expo** — React Native framework
-- **expo-openclaw-chat** — Gateway WebSocket SDK by [@brunobar79](https://github.com/brunobar79)
+- **[Expo](https://expo.dev)** — React Native framework
+- **[expo-openclaw-chat](https://github.com/brunobar79/expo-openclaw-chat)** — Gateway WebSocket SDK by [@brunobar79](https://github.com/brunobar79)
 - **TypeScript** — Type safety
-- **React Native** — Native UI
+- **React Native** — Native UI components
+
+## 🗺️ Roadmap
+
+- [x] 💬 Basic chat with Gateway connection
+- [x] 🦎 Chameleon Theme (light/dark)
+- [ ] 🎭 Persona Picker
+- [ ] 🎨 Model Selector
+- [ ] 🔊 Voice Playback (TTS)
+- [ ] 📌 Pin Sessions
+- [ ] 📏 Text Size Settings
+- [ ] 🖼️ Image Attachments
+- [ ] 📋 Session Management (list, create, delete)
+- [ ] 🔔 Push Notifications
+- [ ] 📝 Markdown Rendering
+- [ ] 🔍 Search
 
 ## 🙏 Credits
 
-- **[expo-openclaw-chat](https://github.com/brunobar79/expo-openclaw-chat)** by [Bruno Barbieri](https://github.com/brunobar79) — Gateway SDK that powers the connection
-- **[OpenClaw](https://github.com/openclaw/openclaw)** — The AI gateway
-- **[OpenCami](https://github.com/robbyczgw-cla/opencami)** — Web client (sister project)
+This project wouldn't exist without these amazing open-source projects:
+
+- **[expo-openclaw-chat](https://github.com/brunobar79/expo-openclaw-chat)** by [Bruno Barbieri](https://github.com/brunobar79) — The Gateway SDK that powers all communication between CamiApp and OpenClaw. CamiApp uses this as a dependency, not a fork.
+- **[OpenClaw](https://github.com/openclaw/openclaw)** — The AI gateway that makes it all possible.
+- **[Expo](https://expo.dev)** — React Native framework for building native apps.
+- **[OpenCami](https://github.com/robbyczgw-cla/opencami)** — Web client sister project, built on [WebClaw](https://github.com/ibelick/webclaw) by [Julien Thibeaut](https://github.com/ibelick).
+
+See [CREDITS.md](CREDITS.md) for full attribution details.
 
 ## 📄 License
 
-MIT
+MIT — See [LICENSE](LICENSE)
+
+---
+
+📱 Built with 💚 as a companion to [OpenCami](https://opencami.xyz)
