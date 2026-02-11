@@ -272,3 +272,53 @@ export const themeOptions: { value: ThemeMode; label: string; icon: string; desc
   { value: 'frost-dark', label: 'Noir', icon: '🌑', description: 'Dark glass effect' },
   { value: 'system', label: 'Auto', icon: '📱', description: 'Follow system' },
 ];
+
+/**
+ * Spacing constants
+ */
+export const spacing = {
+  xs: 4,
+  sm: 8,
+  md: 16,
+  lg: 24,
+  xl: 32,
+} as const;
+
+/**
+ * Border radius constants
+ */
+export const radius = {
+  xs: 4,
+  sm: 8,
+  md: 12,
+  lg: 16,
+  xl: 24,
+  full: 9999,
+} as const;
+
+/**
+ * Shadow presets (for iOS, Android uses elevation)
+ */
+export const shadows = {
+  sm: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  md: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  lg: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+} as const;
