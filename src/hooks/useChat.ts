@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { GatewayClient, ChatEngine, type UIMessage, type PendingAttachment as SDKPendingAttachment } from 'expo-openclaw-chat';
-import type { SessionMeta, PickedImage } from '../types';
+import type { SessionMeta, PickedAttachment } from '../types';
 import { StorageHelpers } from '../stores/storage';
 
 type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'reconnecting';
@@ -29,7 +29,7 @@ interface UseChatReturn {
   messages: UIMessage[];
   
   // Actions
-  send: (text: string, images?: PickedImage[]) => Promise<void>;
+  send: (text: string, attachments?: PickedAttachment[]) => Promise<void>;
   abort: () => Promise<void>;
   clear: () => void;
   reconnect: () => Promise<void>;
@@ -242,22 +242,29 @@ export function useChat({ gatewayUrl, authToken, sessionKey = 'main' }: UseChatO
   }, [currentSessionKey]); // Only run when session changes
   
   // Send message
-  const send = useCallback(async (text: string, images?: PickedImage[]) => {
+  const send = useCallback(async (text: string, attachmentsInput?: PickedAttachment[]) => {
     const engine = engineRef.current;
     if (!engine) {
       throw new Error('Not connected');
     }
     
-    console.log('[useChat] Sending message:', { text: text.substring(0, 50), hasImages: !!images?.length });
+    console.log('[useChat] Sending message:', { text: text.substring(0, 50), hasAttachments: !!attachmentsInput?.length });
     
-    // Convert images to SDK attachment format
-    const attachments: SDKPendingAttachment[] | undefined = images?.map((img, i) => ({
-      id: `img-${Date.now()}-${i}`,
-      fileName: img.fileName || `image-${i}.jpg`,
-      mimeType: img.mimeType || 'image/jpeg',
-      content: img.base64 || '',
-      type: 'image' as const,
-    })).filter(a => a.content);
+    // Convert attachments to SDK format (image/file)
+    // Note: SDK supports 'image' | 'file' - audio files are sent as 'file'
+    const attachments: SDKPendingAttachment[] | undefined = attachmentsInput?.map((att, i) => {
+      const mimeType = att.mimeType || 'image/jpeg';
+      const isImage = mimeType.startsWith('image/');
+      const type: 'image' | 'file' = isImage ? 'image' : 'file';
+      const ext = mimeType.startsWith('audio/') ? 'm4a' : (isImage ? 'jpg' : 'bin');
+      return {
+        id: `att-${Date.now()}-${i}`,
+        fileName: att.fileName || `attachment-${i}.${ext}`,
+        mimeType,
+        content: att.base64 || '',
+        type,
+      };
+    }).filter(a => a.content);
     
     await engine.send(text, attachments);
     

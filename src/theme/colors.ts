@@ -118,6 +118,11 @@ export type Theme = {
   success: string;
   warning: string;
   info: string;
+  // Input fields
+  inputBackground: string;
+  inputBorder: string;
+  // Card backgrounds
+  card: string;
   // Glass effect colors (for Frost themes)
   glassBackground?: string;
   glassBorder?: string;
@@ -145,6 +150,9 @@ export const lightTheme: Theme = {
   success: colors.success,
   warning: colors.warning,
   info: colors.info,
+  inputBackground: colors.neutral[100],
+  inputBorder: colors.neutral[200],
+  card: colors.neutral[0],
 };
 
 /**
@@ -169,6 +177,9 @@ export const darkTheme: Theme = {
   success: colors.success,
   warning: colors.warning,
   info: colors.info,
+  inputBackground: colors.neutral[800],
+  inputBorder: colors.neutral[700],
+  card: colors.neutral[900],
 };
 
 /**
@@ -193,6 +204,9 @@ export const frostLightTheme: Theme = {
   success: colors.success,
   warning: colors.warning,
   info: colors.info,
+  inputBackground: 'rgba(255, 255, 255, 0.5)',
+  inputBorder: 'rgba(165, 180, 252, 0.3)',
+  card: 'rgba(255, 255, 255, 0.6)',
   glassBackground: 'rgba(255, 255, 255, 0.6)',
   glassBorder: 'rgba(255, 255, 255, 0.3)',
 };
@@ -219,6 +233,9 @@ export const frostDarkTheme: Theme = {
   success: colors.success,
   warning: colors.warning,
   info: colors.info,
+  inputBackground: 'rgba(30, 30, 53, 0.6)',
+  inputBorder: 'rgba(93, 93, 160, 0.3)',
+  card: 'rgba(22, 22, 37, 0.7)',
   glassBackground: 'rgba(22, 22, 37, 0.7)',
   glassBorder: 'rgba(255, 255, 255, 0.12)',
 };
@@ -282,6 +299,7 @@ export const spacing = {
   md: 16,
   lg: 24,
   xl: 32,
+  xxl: 48,
 } as const;
 
 /**

@@ -69,8 +69,8 @@ export interface DisplayMessage extends Omit<UIMessage, 'content'> {
 // Export conversation format
 export type ExportFormat = 'markdown' | 'json' | 'text';
 
-// Image picker result
-export interface PickedImage {
+// Attachment picker result (image/audio)
+export interface PickedAttachment {
   uri: string;
   base64?: string;
   mimeType?: string;
@@ -78,3 +78,6 @@ export interface PickedImage {
   height?: number;
   fileName?: string;
 }
+
+// Backward compatibility
+export type PickedImage = PickedAttachment;

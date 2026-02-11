@@ -1,14 +1,27 @@
 /**
- * New Messages Pill
+ * New Messages Pill - Redesigned
  * 
- * Shows "X new messages" when user is scrolled up
- * Tapping scrolls to bottom
+ * Premium notification pill with:
+ * - Smooth slide-in animation
+ * - Bounce effect for new messages
+ * - Touch feedback
  */
 
-import React from 'react';
-import { TouchableOpacity, Text, StyleSheet, Animated } from 'react-native';
+import React, { useEffect } from 'react';
+import { Text, StyleSheet, TouchableOpacity } from 'react-native';
+import Animated, {
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+  withSequence,
+  FadeIn,
+  FadeOut,
+  SlideInUp,
+  SlideOutUp,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { useSettings } from '../stores/settings';
+import { spacing, radius, shadows } from '../theme/colors';
 
 interface NewMessagesPillProps {
   count: number;
@@ -16,55 +29,98 @@ interface NewMessagesPillProps {
   onPress: () => void;
 }
 
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
 export function NewMessagesPill({ count, visible, onPress }: NewMessagesPillProps) {
   const { theme } = useSettings();
   
-  if (!visible || count === 0) return null;
+  const pillScale = useSharedValue(1);
+  const bounceValue = useSharedValue(0);
+  
+  // Bounce animation when count increases
+  useEffect(() => {
+    if (count > 0) {
+      pillScale.value = withSequence(
+        withSpring(1.08, { damping: 8 }),
+        withSpring(1, { damping: 10 })
+      );
+    }
+  }, [count, pillScale]);
+  
+  const pillAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: pillScale.value }],
+  }));
   
   const handlePress = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+    pillScale.value = withSequence(
+      withSpring(0.95, { damping: 15 }),
+      withSpring(1, { damping: 12 })
+    );
     onPress();
   };
   
+  const handlePressIn = () => {
+    pillScale.value = withSpring(0.95, { damping: 15 });
+  };
+  
+  const handlePressOut = () => {
+    pillScale.value = withSpring(1, { damping: 12 });
+  };
+  
+  if (!visible || count === 0) return null;
+  
   return (
-    <TouchableOpacity
-      style={[styles.container, { backgroundColor: theme.primary }]}
-      onPress={handlePress}
-      activeOpacity={0.8}
+    <Animated.View
+      entering={SlideInUp.springify().damping(15)}
+      exiting={SlideOutUp.springify().damping(20)}
+      style={styles.wrapper}
     >
-      <Text style={styles.arrow}>↓</Text>
-      <Text style={styles.text}>
-        {count} new message{count !== 1 ? 's' : ''}
-      </Text>
-    </TouchableOpacity>
+      <AnimatedTouchable
+        style={[
+          styles.container, 
+          { backgroundColor: theme.primary },
+          shadows.md,
+          pillAnimatedStyle,
+        ]}
+        onPress={handlePress}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        activeOpacity={1}
+      >
+        <Text style={styles.arrow}>↓</Text>
+        <Text style={styles.text}>
+          {count} new message{count !== 1 ? 's' : ''}
+        </Text>
+      </AnimatedTouchable>
+    </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  wrapper: {
     position: 'absolute',
     bottom: 80,
     alignSelf: 'center',
+  },
+  container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm + 2,
+    borderRadius: radius.full,
+    gap: spacing.xs,
   },
   arrow: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '700',
+    lineHeight: 16,
   },
   text: {
     color: '#fff',
     fontSize: 14,
     fontWeight: '600',
+    letterSpacing: 0.2,
   },
 });
