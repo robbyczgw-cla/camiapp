@@ -35,6 +35,11 @@ export interface UseNotificationsReturn {
   setBadgeCount: (count: number) => Promise<void>;
 }
 
+export interface NotificationResponseData {
+  sessionKey?: string;
+  [key: string]: unknown;
+}
+
 /**
  * Hook for managing notifications
  */
@@ -189,4 +194,18 @@ export function useAppState(): AppStateStatus {
 export function useIsBackground(): boolean {
   const appState = useAppState();
   return appState === 'background' || appState === 'inactive';
+}
+
+/**
+ * Listen for notification tap responses
+ */
+export function useNotificationResponses(onResponse: (data: NotificationResponseData) => void) {
+  useEffect(() => {
+    const subscription = Notifications.addNotificationResponseReceivedListener((response) => {
+      const data = (response.notification.request.content.data || {}) as NotificationResponseData;
+      onResponse(data);
+    });
+
+    return () => subscription.remove();
+  }, [onResponse]);
 }

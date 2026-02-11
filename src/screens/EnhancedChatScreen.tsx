@@ -57,7 +57,7 @@ import { NewMessagesPill } from '../components/NewMessagesPill';
 import { MessageListSkeleton, EmptyMessages, VoiceInputButton } from '../components';
 import { exportConversation } from '../utils/export';
 import { needsTitle, generateAndCacheTitle, getCachedTitle } from '../services/smartTitles';
-import { useNotifications, useIsBackground } from '../services/notifications';
+import { useNotifications, useIsBackground, useNotificationResponses } from '../services/notifications';
 import { useSoundEffects, type RecordingResult } from '../services/audio';
 import { spacing, radius, shadows } from '../theme/colors';
 import type { UIMessage, PickedImage } from '../types';
@@ -167,6 +167,10 @@ export function EnhancedChatScreen({ onDisconnect }: EnhancedChatScreenProps) {
     setPendingImage(null);
     Keyboard.dismiss();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+
+    if (soundEffectsEnabled) {
+      playSound('send');
+    }
     
     try {
       await send(text, image ? [image] : undefined);
@@ -176,7 +180,7 @@ export function EnhancedChatScreen({ onDisconnect }: EnhancedChatScreenProps) {
       setInput(text);
       if (image) setPendingImage(image);
     }
-  }, [input, pendingImage, isConnected, send, sendButtonScale, sendButtonRotation]);
+  }, [input, pendingImage, isConnected, send, sendButtonScale, sendButtonRotation, soundEffectsEnabled, playSound]);
 
   // Handle voice recording complete (audio attachment)
   const handleVoiceRecording = useCallback(async (recording: RecordingResult) => {
@@ -186,7 +190,11 @@ export function EnhancedChatScreen({ onDisconnect }: EnhancedChatScreenProps) {
     }
 
     try {
-      await send('Please transcribe and respond to this voice message.', [{
+      if (soundEffectsEnabled) {
+        playSound('send');
+      }
+
+      await send('Please transcribe and respond to this voice message.', [{ 
         uri: recording.uri,
         base64: recording.base64,
         mimeType: recording.mimeType,
@@ -196,7 +204,7 @@ export function EnhancedChatScreen({ onDisconnect }: EnhancedChatScreenProps) {
       console.error('Voice send failed:', err);
       Alert.alert('Error', 'Failed to send voice message. Please try again.');
     }
-  }, [isConnected, send]);
+  }, [isConnected, send, soundEffectsEnabled, playSound]);
   
   // Handle abort
   const handleAbort = useCallback(async () => {
@@ -255,6 +263,13 @@ export function EnhancedChatScreen({ onDisconnect }: EnhancedChatScreenProps) {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     switchSession(sessionKey);
   }, [switchSession]);
+
+  // Notification tap opens relevant chat session
+  useNotificationResponses((data) => {
+    if (typeof data.sessionKey === 'string' && data.sessionKey.length > 0) {
+      handleSwitchSession(data.sessionKey);
+    }
+  });
   
   // Navigate to message from global search
   const navigateToMessage = useCallback((sessionKey: string, messageIndex: number) => {
