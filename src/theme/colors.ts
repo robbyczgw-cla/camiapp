@@ -111,7 +111,9 @@ export type Theme = {
   primary: string;
   primaryDark: string;
   userBubble: string;
+  userBubbleText: string;
   aiBubble: string;
+  aiBubbleText: string;
   error: string;
   success: string;
   warning: string;
@@ -136,7 +138,9 @@ export const lightTheme: Theme = {
   primary: colors.primary[500],
   primaryDark: colors.primary[700],
   userBubble: colors.primary[100],
+  userBubbleText: colors.neutral[900],
   aiBubble: colors.neutral[0],
+  aiBubbleText: colors.neutral[900],
   error: colors.error,
   success: colors.success,
   warning: colors.warning,
@@ -158,7 +162,9 @@ export const darkTheme: Theme = {
   primary: colors.primary[500],
   primaryDark: colors.primary[400],
   userBubble: colors.primary[900],
+  userBubbleText: colors.neutral[50],
   aiBubble: colors.neutral[800],
+  aiBubbleText: colors.neutral[50],
   error: colors.error,
   success: colors.success,
   warning: colors.warning,
@@ -180,7 +186,9 @@ export const frostLightTheme: Theme = {
   primary: colors.primary[500],
   primaryDark: colors.primary[700],
   userBubble: 'rgba(34, 197, 94, 0.15)',
+  userBubbleText: colors.frost.light[900],
   aiBubble: 'rgba(255, 255, 255, 0.6)',
+  aiBubbleText: colors.frost.light[900],
   error: colors.error,
   success: colors.success,
   warning: colors.warning,
@@ -204,7 +212,9 @@ export const frostDarkTheme: Theme = {
   primary: colors.primary[500],
   primaryDark: colors.primary[400],
   userBubble: 'rgba(34, 197, 94, 0.2)',
+  userBubbleText: colors.frost.dark[950],
   aiBubble: 'rgba(30, 30, 53, 0.7)',
+  aiBubbleText: colors.frost.dark[950],
   error: colors.error,
   success: colors.success,
   warning: colors.warning,
