@@ -1,23 +1,31 @@
 /**
- * Message bubble component with markdown support
+ * Message Bubble Component - Redesigned
  * 
- * Features:
- * - Markdown rendering for assistant messages
- * - Image display
- * - Timestamps
- * - Long press to copy
- * - Streaming indicator
- * - TTS playback
+ * Premium message bubbles with:
+ * - Smooth fade-in + slide-up animations
+ * - Proper 16px rounded corners with subtle shadows
+ * - User messages: accent color, right-aligned
+ * - AI messages: dark surface, left-aligned, wider max-width
+ * - Timestamps: small, muted, below bubble
+ * - TTS playback with animated button
  */
 
 import React, { useMemo, useCallback, useState } from 'react';
 import { View, Text, Image, StyleSheet, Pressable, Alert, Share, TouchableOpacity, ActivityIndicator } from 'react-native';
+import Animated, { 
+  useAnimatedStyle, 
+  useSharedValue, 
+  withTiming, 
+  withSpring,
+  FadeIn,
+} from 'react-native-reanimated';
 import * as Clipboard from 'expo-clipboard';
 import * as Haptics from 'expo-haptics';
 import { MarkdownRenderer, SimpleTextRenderer } from './MarkdownRenderer';
 import { TypingDots } from './TypingIndicator';
 import { useSettings } from '../stores/settings';
-import { speakText, stopSpeaking, isSpeaking } from '../services/tts';
+import { speakText, stopSpeaking } from '../services/tts';
+import { spacing, radius, shadows } from '../theme/colors';
 import type { UIMessage } from '../types';
 
 interface MessageBubbleProps {
@@ -26,15 +34,30 @@ interface MessageBubbleProps {
   showTimestamp?: boolean;
   gatewayUrl?: string;
   onReply?: (text: string) => void;
+  isNew?: boolean;
 }
 
-export function MessageBubble({ message, isStreaming, showTimestamp = true, gatewayUrl, onReply }: MessageBubbleProps) {
+const AnimatedPressable = Animated.createAnimatedComponent(Pressable);
+const AnimatedTouchable = Animated.createAnimatedComponent(TouchableOpacity);
+
+export function MessageBubble({ 
+  message, 
+  isStreaming, 
+  showTimestamp = true, 
+  gatewayUrl, 
+  onReply,
+  isNew = false,
+}: MessageBubbleProps) {
   const { theme, textStyle, isDark } = useSettings();
   const [ttsLoading, setTtsLoading] = useState(false);
   const [ttsPlaying, setTtsPlaying] = useState(false);
   
   const isUser = message.role === 'user';
   const isError = message.isError;
+  
+  // Animation values
+  const scale = useSharedValue(1);
+  const ttsButtonScale = useSharedValue(1);
   
   // Extract text and images from content blocks
   const { textContent, images, thinkingContent } = useMemo(() => {
@@ -77,7 +100,6 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
     try {
       await Clipboard.setStringAsync(textContent);
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-      // Show brief feedback
     } catch (error) {
       console.warn('Failed to copy:', error);
     }
@@ -88,9 +110,7 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
     if (!textContent) return;
     
     try {
-      await Share.share({
-        message: textContent,
-      });
+      await Share.share({ message: textContent });
     } catch (error) {
       console.warn('Failed to share:', error);
     }
@@ -100,8 +120,13 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
   const handleTTS = useCallback(async () => {
     if (!textContent || !gatewayUrl) return;
     
+    // Animate button press
+    ttsButtonScale.value = withSpring(0.9, { damping: 15 });
+    setTimeout(() => {
+      ttsButtonScale.value = withSpring(1, { damping: 15 });
+    }, 100);
+    
     if (ttsPlaying) {
-      // Stop current playback
       setTtsPlaying(false);
       await stopSpeaking();
       return;
@@ -113,86 +138,108 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
     try {
       await speakText(textContent, gatewayUrl);
       setTtsPlaying(true);
-      // Auto-reset when done (the sound callback handles this, but let's add a safety timeout)
       setTimeout(() => setTtsPlaying(false), 60000);
     } catch (error) {
       console.warn('TTS failed:', error);
-      Alert.alert('TTS Unavailable', 'Text-to-speech is not available. Please check your gateway configuration.');
+      Alert.alert('TTS Unavailable', 'Text-to-speech is not available.');
     } finally {
       setTtsLoading(false);
     }
-  }, [textContent, gatewayUrl, ttsPlaying]);
+  }, [textContent, gatewayUrl, ttsPlaying, ttsButtonScale]);
   
   // Handle reply
   const handleReply = useCallback(async () => {
     if (!textContent || !onReply) return;
-    // Create a quote format
     const quote = `> ${textContent.slice(0, 100)}${textContent.length > 100 ? '...' : ''}\n\n`;
     onReply(quote);
   }, [textContent, onReply]);
   
-  // Long press handler with extended menu
+  // Long press handler
   const handleLongPress = useCallback(() => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    scale.value = withSpring(0.98, { damping: 15 });
+    setTimeout(() => {
+      scale.value = withSpring(1, { damping: 15 });
+    }, 100);
     
     const options = [
       { text: 'Copy', onPress: handleCopy },
       { text: 'Share', onPress: handleShare },
     ];
     
-    // Only show Reply if handler is provided
     if (onReply) {
       options.unshift({ text: 'Reply', onPress: handleReply });
     }
     
-    // Add TTS option for assistant messages
     if (!isUser && textContent && gatewayUrl && !isStreaming) {
       options.push({ text: ttsPlaying ? 'Stop Audio' : 'Read Aloud', onPress: handleTTS });
     }
     
     options.push({ text: 'Cancel', style: 'cancel' } as any);
     
-    Alert.alert(
-      'Message',
-      undefined,
-      options,
-      { cancelable: true }
-    );
-  }, [handleCopy, handleShare, handleReply, handleTTS, onReply, isUser, textContent, gatewayUrl, isStreaming, ttsPlaying]);
+    Alert.alert('Message', undefined, options, { cancelable: true });
+  }, [handleCopy, handleShare, handleReply, handleTTS, onReply, isUser, textContent, gatewayUrl, isStreaming, ttsPlaying, scale]);
+  
+  // Press in/out animations
+  const handlePressIn = useCallback(() => {
+    scale.value = withTiming(0.98, { duration: 100 });
+  }, [scale]);
+  
+  const handlePressOut = useCallback(() => {
+    scale.value = withSpring(1, { damping: 20 });
+  }, [scale]);
+  
+  // Animated styles
+  const bubbleAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: scale.value }],
+  }));
+  
+  const ttsButtonAnimatedStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: ttsButtonScale.value }],
+  }));
   
   const bubbleStyle = useMemo(() => [
     styles.bubble,
-    isUser ? [styles.userBubble, { backgroundColor: theme.primary }] : [styles.assistantBubble, { backgroundColor: theme.aiBubble }],
-    isError && styles.errorBubble,
+    isUser 
+      ? [styles.userBubble, { backgroundColor: theme.userBubble }]
+      : [styles.assistantBubble, { backgroundColor: theme.aiBubble }],
+    isError && [styles.errorBubble, { borderColor: theme.error }],
+    shadows.bubble,
   ], [isUser, isError, theme]);
   
   return (
-    <Pressable
+    <AnimatedPressable
       onLongPress={handleLongPress}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
       delayLongPress={400}
       style={[styles.container, isUser && styles.userContainer]}
+      entering={FadeIn.duration(200).delay(50)}
     >
-      <View style={bubbleStyle}>
+      <Animated.View style={[bubbleStyle, bubbleAnimatedStyle]}>
         {/* Role label for assistant */}
         {!isUser && (
-          <Text style={[styles.roleLabel, { color: theme.primary }]}>
-            🦎 Cami
-          </Text>
+          <View style={styles.roleContainer}>
+            <Text style={[styles.roleLabel, { color: theme.primary }]}>
+              🦎 Cami
+            </Text>
+          </View>
         )}
         
         {/* Images */}
         {images.map((uri, i) => (
-          <Image
-            key={`img-${i}`}
-            source={{ uri }}
-            style={styles.image}
-            resizeMode="contain"
-          />
+          <View key={`img-${i}`} style={styles.imageContainer}>
+            <Image
+              source={{ uri }}
+              style={styles.image}
+              resizeMode="cover"
+            />
+          </View>
         ))}
         
-        {/* Thinking content (collapsible) */}
+        {/* Thinking content */}
         {thinkingContent && (
-          <View style={[styles.thinkingContainer, { backgroundColor: isDark ? '#2d2d2d' : '#f5f5f5' }]}>
+          <View style={[styles.thinkingContainer, { backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.04)' }]}>
             <Text style={[styles.thinkingLabel, { color: theme.textMuted }]}>💭 Thinking...</Text>
             <Text style={[styles.thinkingText, { color: theme.textSecondary }]} numberOfLines={3}>
               {thinkingContent}
@@ -200,7 +247,7 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
           </View>
         )}
         
-        {/* Text content with markdown */}
+        {/* Text content */}
         {textContent ? (
           isUser ? (
             <SimpleTextRenderer content={textContent} isUserMessage />
@@ -214,24 +261,31 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
         
         {/* Error message */}
         {isError && message.errorMessage && (
-          <Text style={styles.errorMessage}>{message.errorMessage}</Text>
+          <Text style={[styles.errorMessage, { color: theme.error }]}>
+            {message.errorMessage}
+          </Text>
         )}
         
-        {/* Footer: Timestamp and TTS button */}
+        {/* Footer */}
         <View style={styles.footer}>
           {/* TTS button for assistant messages */}
           {!isUser && textContent && gatewayUrl && !isStreaming && (
-            <TouchableOpacity
-              style={[styles.ttsButton, { backgroundColor: theme.surfaceVariant }]}
+            <AnimatedTouchable
+              style={[
+                styles.ttsButton, 
+                { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)' },
+                ttsButtonAnimatedStyle,
+              ]}
               onPress={handleTTS}
               disabled={ttsLoading}
+              activeOpacity={0.7}
             >
               {ttsLoading ? (
                 <ActivityIndicator size="small" color={theme.primary} />
               ) : (
                 <Text style={styles.ttsIcon}>{ttsPlaying ? '⏹️' : '🔊'}</Text>
               )}
-            </TouchableOpacity>
+            </AnimatedTouchable>
           )}
           
           {/* Timestamp */}
@@ -244,15 +298,15 @@ export function MessageBubble({ message, isStreaming, showTimestamp = true, gate
             </Text>
           )}
         </View>
-      </View>
-    </Pressable>
+      </Animated.View>
+    </AnimatedPressable>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
     flexDirection: 'row',
     justifyContent: 'flex-start',
   },
@@ -261,41 +315,46 @@ const styles = StyleSheet.create({
   },
   bubble: {
     maxWidth: '85%',
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: radius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
   },
   userBubble: {
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: spacing.xs,
   },
   assistantBubble: {
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: spacing.xs,
   },
   errorBubble: {
-    backgroundColor: '#FFE5E5',
-    borderColor: '#FF3B30',
     borderWidth: 1,
+  },
+  roleContainer: {
+    marginBottom: spacing.xs,
   },
   roleLabel: {
     fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 4,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  imageContainer: {
+    marginBottom: spacing.sm,
+    borderRadius: radius.md,
+    overflow: 'hidden',
   },
   image: {
-    width: 200,
-    height: 150,
-    borderRadius: 8,
-    marginBottom: 8,
+    width: 220,
+    height: 165,
+    borderRadius: radius.md,
   },
   thinkingContainer: {
-    padding: 8,
-    borderRadius: 8,
-    marginBottom: 8,
+    padding: spacing.sm,
+    borderRadius: radius.sm,
+    marginBottom: spacing.sm,
   },
   thinkingLabel: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: spacing.xs,
   },
   thinkingText: {
     fontSize: 12,
@@ -303,15 +362,15 @@ const styles = StyleSheet.create({
   },
   errorMessage: {
     fontSize: 12,
-    color: '#FF3B30',
-    marginTop: 4,
+    marginTop: spacing.xs,
     fontStyle: 'italic',
   },
   footer: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginTop: 4,
+    marginTop: spacing.sm,
+    minHeight: 20,
   },
   ttsButton: {
     width: 28,
@@ -327,5 +386,6 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textAlign: 'right',
     flex: 1,
+    letterSpacing: 0.2,
   },
 });
