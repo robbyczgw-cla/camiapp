@@ -1,279 +1,129 @@
-import { useState, useCallback } from 'react';
+/**
+ * CamiApp - Your AI assistant in your pocket 🦎
+ * 
+ * A full-featured mobile client for OpenClaw Gateway
+ * Built with Expo and React Native
+ */
+
+import React, { useState, useCallback, useEffect } from 'react';
 import { StatusBar } from 'expo-status-bar';
-import {
-  StyleSheet,
-  Text,
-  View,
-  TextInput,
-  Pressable,
-  Image,
-  KeyboardAvoidingView,
-  Platform,
-  useColorScheme,
-} from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
-import { createChat, type ChatInstance } from 'expo-openclaw-chat';
-import { lightTheme, darkTheme } from './src/theme/colors';
+import * as SplashScreen from 'expo-splash-screen';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
+import { StyleSheet, View } from 'react-native';
 
-export default function App() {
-  const colorScheme = useColorScheme();
-  const theme = colorScheme === 'dark' ? darkTheme : lightTheme;
+// Providers
+import { SettingsProvider, useSettings } from './src/stores/settings';
+import { StorageHelpers } from './src/stores/storage';
 
-  const [gatewayUrl, setGatewayUrl] = useState('');
-  const [token, setToken] = useState('');
-  const [chatInstance, setChatInstance] = useState<ChatInstance | null>(null);
+// Screens
+import { EnhancedConnectScreen } from './src/screens/EnhancedConnectScreen';
+import { EnhancedChatScreen } from './src/screens/EnhancedChatScreen';
+import { OnboardingScreen } from './src/screens/OnboardingScreen';
 
-  const handleConfigure = useCallback(() => {
-    const trimmedGatewayUrl = gatewayUrl.trim();
-    const trimmedToken = token.trim();
-    if (!trimmedGatewayUrl) return;
+// Keep splash screen visible while we check onboarding status
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Ignore errors - splash screen may have already been hidden
+});
 
-    const instance = createChat({
-      gatewayUrl: trimmedGatewayUrl,
-      token: trimmedToken ? trimmedToken : undefined,
-      title: 'CamiApp 🦎',
-      placeholder: 'Message...',
-    });
-    setChatInstance(instance);
-  }, [gatewayUrl, token]);
-
-  const handleOpenChat = useCallback(() => {
-    chatInstance?.open();
-  }, [chatInstance]);
-
-  const handleReset = useCallback(() => {
-    setChatInstance(null);
-    setGatewayUrl('');
-    setToken('');
+// App content with access to settings
+function AppContent() {
+  const { isConnected, clearConnection, isDark, gatewayUrl, theme } = useSettings();
+  const [showChat, setShowChat] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState<boolean | null>(null);
+  const [appIsReady, setAppIsReady] = useState(false);
+  
+  // Check onboarding status on mount
+  useEffect(() => {
+    async function prepare() {
+      try {
+        // Small delay to ensure storage is loaded
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Check if onboarding is complete
+        const onboardingComplete = StorageHelpers.getOnboardingComplete();
+        setShowOnboarding(!onboardingComplete);
+        
+        // If already connected, go to chat
+        if (onboardingComplete && gatewayUrl) {
+          setShowChat(true);
+        }
+      } catch (e) {
+        console.warn('Error checking onboarding status:', e);
+        setShowOnboarding(false);
+      } finally {
+        setAppIsReady(true);
+      }
+    }
+    
+    prepare();
+  }, [gatewayUrl]);
+  
+  // Hide splash screen when ready
+  useEffect(() => {
+    if (appIsReady) {
+      SplashScreen.hideAsync().catch(() => {
+        // Ignore errors
+      });
+    }
+  }, [appIsReady]);
+  
+  // Handle connect
+  const handleConnect = useCallback(() => {
+    setShowChat(true);
   }, []);
-
-  const content = (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardView}
-      >
-        <View style={styles.header}>
-          <Image
-            source={require('./assets/icon.png')}
-            style={styles.logo}
-          />
-          <Text style={[styles.title, { color: theme.text }]}>CamiApp</Text>
-          <Text style={[styles.subtitle, { color: theme.textSecondary }]}>
-            Your AI assistant in your pocket 🦎
-          </Text>
-        </View>
-
-        <View style={styles.mainContent}>
-          {!chatInstance ? (
-            <View style={styles.configSection}>
-              <Text style={[styles.label, { color: theme.textSecondary }]}>
-                Gateway URL
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
-                  },
-                ]}
-                value={gatewayUrl}
-                onChangeText={setGatewayUrl}
-                placeholder="wss://your-gateway.example.com"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                keyboardType="url"
-              />
-
-              <Text style={[styles.label, { color: theme.textSecondary }]}>
-                Auth Token
-              </Text>
-              <TextInput
-                style={[
-                  styles.input,
-                  {
-                    backgroundColor: theme.surface,
-                    borderColor: theme.border,
-                    color: theme.text,
-                  },
-                ]}
-                value={token}
-                onChangeText={setToken}
-                placeholder="your-auth-token"
-                placeholderTextColor={theme.textMuted}
-                autoCapitalize="none"
-                autoCorrect={false}
-                secureTextEntry
-              />
-
-              <Pressable
-                style={[
-                  styles.button,
-                  {
-                    backgroundColor: gatewayUrl.trim()
-                      ? theme.primary
-                      : theme.border,
-                  },
-                ]}
-                onPress={handleConfigure}
-                disabled={!gatewayUrl.trim()}
-              >
-                <Text style={styles.buttonText}>Connect 🦎</Text>
-              </Pressable>
-            </View>
-          ) : (
-            <View style={styles.configuredSection}>
-              <View style={[styles.statusBadge, { backgroundColor: theme.surfaceVariant }]}>
-                <View style={[styles.dot, { backgroundColor: theme.primary }]} />
-                <Text style={[styles.connectedText, { color: theme.text }]}>
-                  Gateway configured
-                </Text>
-              </View>
-              <Text
-                style={[styles.urlText, { color: theme.textMuted }]}
-                numberOfLines={1}
-              >
-                {gatewayUrl}
-              </Text>
-
-              <Pressable
-                style={[styles.button, { backgroundColor: theme.primary }]}
-                onPress={handleOpenChat}
-              >
-                <Text style={styles.buttonText}>Open Chat 💬</Text>
-              </Pressable>
-
-              <Pressable
-                style={[styles.resetButton, { borderColor: theme.border }]}
-                onPress={handleReset}
-              >
-                <Text style={[styles.resetButtonText, { color: theme.textSecondary }]}>
-                  Disconnect
-                </Text>
-              </Pressable>
-            </View>
-          )}
-        </View>
-
-        <Text style={[styles.footer, { color: theme.textMuted }]}>
-          Powered by OpenClaw • expo-openclaw-chat
-        </Text>
-      </KeyboardAvoidingView>
-      <StatusBar style={colorScheme === 'dark' ? 'light' : 'dark'} />
-    </SafeAreaView>
-  );
-
-  // Wrap with ChatProvider if configured
-  const ChatProvider = chatInstance?.ChatProvider;
-  if (ChatProvider) {
+  
+  // Handle disconnect
+  const handleDisconnect = useCallback(() => {
+    clearConnection();
+    setShowChat(false);
+  }, [clearConnection]);
+  
+  // Handle onboarding complete
+  const handleOnboardingComplete = useCallback(() => {
+    setShowOnboarding(false);
+    // If gateway was configured during onboarding, go to chat
+    if (StorageHelpers.getGatewayUrl()) {
+      setShowChat(true);
+    }
+  }, []);
+  
+  // Don't render until we've checked onboarding status
+  if (!appIsReady || showOnboarding === null) {
     return (
-      <SafeAreaProvider>
-        <ChatProvider>{content}</ChatProvider>
-      </SafeAreaProvider>
+      <View style={[styles.container, { backgroundColor: theme.background }]} />
     );
   }
+  
+  return (
+    <>
+      {showOnboarding ? (
+        <OnboardingScreen onComplete={handleOnboardingComplete} />
+      ) : showChat && gatewayUrl ? (
+        <EnhancedChatScreen onDisconnect={handleDisconnect} />
+      ) : (
+        <EnhancedConnectScreen onConnect={handleConnect} />
+      )}
+      <StatusBar style={isDark ? 'light' : 'dark'} />
+    </>
+  );
+}
 
-  return <SafeAreaProvider>{content}</SafeAreaProvider>;
+// Main App component
+export default function App() {
+  return (
+    <GestureHandlerRootView style={styles.container}>
+      <SafeAreaProvider>
+        <SettingsProvider>
+          <AppContent />
+        </SettingsProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
+  );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  keyboardView: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 24,
-  },
-  header: {
-    alignItems: 'center',
-    marginBottom: 48,
-  },
-  logo: {
-    width: 100,
-    height: 100,
-    borderRadius: 24,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 32,
-    fontWeight: '800',
-    marginBottom: 8,
-  },
-  subtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-  },
-  mainContent: {
-    gap: 8,
-  },
-  configSection: {
-    gap: 8,
-  },
-  configuredSection: {
-    alignItems: 'center',
-    gap: 16,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginTop: 4,
-  },
-  input: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 14,
-    fontSize: 16,
-  },
-  button: {
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    width: '100%',
-    marginTop: 8,
-  },
-  buttonText: {
-    color: '#ffffff',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statusBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  dot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  connectedText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  urlText: {
-    fontSize: 14,
-  },
-  resetButton: {
-    borderWidth: 1,
-    borderRadius: 12,
-    padding: 12,
-    alignItems: 'center',
-    width: '100%',
-  },
-  resetButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  footer: {
-    textAlign: 'center',
-    marginTop: 32,
-    fontSize: 12,
   },
 });
