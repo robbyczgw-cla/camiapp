@@ -30,7 +30,7 @@ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 // Quick presets for gateway URLs
 const GATEWAY_PRESETS = [
-  { label: 'Tailscale', url: 'wss://openclaw-server.tail8a9ea9.ts.net', icon: '🌐' },
+  { label: 'Tailscale', url: 'wss://your-openclaw-server.ts.net', icon: '🌐' },
   { label: 'Localhost', url: 'ws://localhost:18789', icon: '💻' },
 ];
 
