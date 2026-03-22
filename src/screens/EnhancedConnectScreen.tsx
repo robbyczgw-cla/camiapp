@@ -31,7 +31,7 @@ interface EnhancedConnectScreenProps {
 
 // Common gateway URLs for quick access
 const QUICK_URLS = [
-  { label: 'Tailscale', url: 'wss://openclaw-server.tail8a9ea9.ts.net' },
+  { label: 'Tailscale', url: 'wss://your-openclaw-server.ts.net' },
   { label: 'Localhost', url: 'ws://localhost:18789' },
 ];
 
